@@ -1,0 +1,51 @@
+echo "# robot" >> README.md
+git init
+git add README.md
+git commit -m "first commit"
+git branch -M main
+git remote add origin https://github.com/MarkBartonRobot/robot.git
+git push -u origin main
+
+/**
+ * Run ITR menu
+ *
+ * @param $portalId
+ * @param $dialogId
+ * @param $userId
+ * @param string $message
+ * @return bool
+ */
+ function itrRun($portalId, $dialogId, $userId, $message = '')
+{
+    if ($userId <= 0)
+        return false;
+
+    $menu0 = new ItrMenu(0);
+    $menu0->setText('Выберите тему запроса');
+    $menu0->addItem(1, 'Text', ItrItem::sendText('Text message (for #USER_NAME#)'));
+    $menu0->addItem(2, 'Text without menu', ItrItem::sendText('Text message without menu', true));
+    $menu0->addItem(3, 'Open menu #1', ItrItem::openMenu(1));
+    $menu0->addItem(0, 'Wait operator answer', ItrItem::sendText('Wait operator answer', true));
+
+    $menu1 = new ItrMenu(1);
+    $menu1->setText('Second menu (#1)');
+    $menu1->addItem(2, 'Transfer to queue', ItrItem::transferToQueue('Transfer to queue'));
+    $menu1->addItem(3, 'Transfer to user', ItrItem::transferToUser(1, false, 'Transfer to user #1'));
+    $menu1->addItem(4, 'Transfer to bot', ItrItem::transferToBot('marta', true, 'Transfer to bot Marta', 'Marta not found :('));
+    $menu1->addItem(5, 'Finish session', ItrItem::finishSession('Finish session'));
+    $menu1->addItem(6, 'Exec function', ItrItem::execFunction(function($context){
+        $result = restCommand('imbot.message.add', Array(
+            "DIALOG_ID" => $_REQUEST['data']['PARAMS']['DIALOG_ID'],
+            "MESSAGE" => 'Function executed (action)',
+        ), $_REQUEST["auth"]);
+        writeToLog($result, 'Exec function');
+    }, 'Function executed (text)'));
+    $menu1->addItem(9, 'Back to main menu', ItrItem::openMenu(0));
+
+    $itr = new Itr($portalId, $dialogId, 0, $userId);
+    $itr->addMenu($menu0);
+    $itr->addMenu($menu1);
+    $itr->run(prepareText($message));
+
+    return true;
+}
